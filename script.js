@@ -78,18 +78,32 @@ const currencies = new Map([
   ['GBP', 'Pound sterling'],
 ]);
 
-const displayMovements = (movements , sort = false) => {
+
+
+
+const displayMovements = (account , sort = false) => {
   containerMovements.innerHTML = ''
 
-  const movs = sort ?  movements.slice().sort((a,b) => a - b) : movements
+  const movs = sort ?  account.movements.slice().sort((a,b) => a - b) : account.movements
   
   movs.forEach((movement, index) => {
     const type = movement > 0 ? 'deposit' : 'withdrawal'
+
+    //Implementing the current date
+    //const date = new Date(account.movementsDates[index])
+    //const day = `${now.getDay()}`.padStart(2 , 0)
+    //const month = `${now.getMonth() + 1 }`.padStart(2 , 0)
+    //const year = now.getFullYear()
+    //const hour = now.getHours()
+    //const minutes = now.getMinutes()
+    //const displayDate = `${day}/${month}/${year}, ${hour}:${minutes}`
+
+   
     const html = `
     <div class="movements__row">
       <div class="movements__type movements__type--${type}">${index + 1} ${type}</div>
-      <div class="movements__date">3 days ago</div>
-      <div class="movements__value">${movement}</div>
+      <div class="movements__date"></div>
+      <div class="movements__value">${movement.toFixed(2)}</div>
     </div>`
 
     containerMovements.insertAdjacentHTML('afterbegin', html );
@@ -102,8 +116,8 @@ const createUserNames = (accs) => {
    })
 }
 
-const calcUserBalance = (movements) => {
- const balance =  movements.reduce((accumalator , currentMovement ) => {
+const calcUserBalance = (account) => {
+ const balance =  account.movements.reduce((accumalator , currentMovement ) => {
     return accumalator + currentMovement
   }, 0)
   labelBalance.textContent = `${balance} EUR`
@@ -124,16 +138,16 @@ const calcUserSummary = (acc) => {
     .filter((num, i , arr) => num >= 1 )
     .reduce((acc,interest) =>  acc + interest, 0)
     
-  labelSumIn.textContent = `${incomes} EUR`
-  labelSumOut.textContent = `${Math.abs(outcome)} EUR` //Math.abs remove the negative sign
-  labelSumInterest.textContent = `${interest} EUR`
+  labelSumIn.textContent = `${incomes.toFixed(2)}EUR`
+  labelSumOut.textContent = `${Math.abs(outcome).toFixed(2)}EUR` //Math.abs remove the negative sign
+  labelSumInterest.textContent = `${interest.toFixed(2)}EUR`
 }
  
  createUserNames(accounts)
 
  const updateUI = (acc) => {
-  displayMovements(acc.movements);
-  calcUserBalance(acc.movements);
+  displayMovements(acc);
+  calcUserBalance(acc);
   calcUserSummary(acc) 
  }
 
@@ -162,18 +176,23 @@ btnTransfer.addEventListener('click' , (e) => {
     currentAccount.balance >= amount &&
     recieverAccount?.userName !== currentAccount.userName)
      {
-        currentAccount.movement.push(-amount)
+        currentAccount.movements.push(-amount)
         recieverAccount.movements.push(amount)
      }
 
      updateUI(currentAccount)
 })
 
-btnLoan.addEventListener('click' , () => {
+btnLoan.addEventListener('click' , (e) => {
   e.preventDefault()
-  const amount = Number(inputLoanAmount.value)
+  const amount = +(Math.floor(inputLoanAmount.value))  //The plus sign turn it to an integer
 
-  if(amount > 0 && )
+  if(amount > 0 && currentAccount.movements.some(move => move >= amount * 0.1 )){
+    currentAccount.movements.push(amount)
+    updateUI(currentAccount)
+  }
+   inputLoanAmount.value = ''
+    
 })
 
 btnClose.addEventListener('click', (e) => {
@@ -194,6 +213,21 @@ let sorted = false
 
 btnSort.addEventListener( 'click' , (e) => {
   e.preventDefault()
-  displayMovements(currentAccount.movements, !sorted)
+  displayMovements(currentAccount, !sorted)
   sorted = !sorted
 })
+
+//ALWAYS LOGGED IN BY account1
+/*currentAccount = account1
+updateUI(currentAccount)
+containerApp.style.opacity = 100
+
+
+const now = new Date()
+const day = `${now.getDay()}`.padStart(2 , 0)
+const month = `${now.getMonth() + 1 }`.padStart(2 , 0)
+const year = now.getFullYear()
+const hour = now.getHours()
+const minutes = now.getMinutes()
+labelDate.textContent = `${day}/${month}/${year}, ${hour}:${minutes}`*/
+
