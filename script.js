@@ -46,7 +46,7 @@ const account2 = {
 };
 const accounts = [account1, account2];
 
-const movements = [200, 450, -400, 3000, -650, -130, 70, 1300]
+
 
 // Elements
 const labelWelcome = document.querySelector('.welcome');
@@ -81,7 +81,7 @@ const inputClosePin = document.querySelector('.form__input--pin');
 
 //Global variables
 
-let currentAccount;
+let currentAccount, timer;
 // LECTURES
 
 const currencies = new Map([
@@ -90,7 +90,40 @@ const currencies = new Map([
   ['GBP', 'Pound sterling'],
 ]);
 
+const formatDisplayDates = (date) =>{
+    const calculateDaysPassed = (date1, date2) => Math.round(Math.abs(date2 - date1) / (24 * 60 * 60 * 1000))
+    const daysPassed = calculateDaysPassed(new Date(), date)
+    if(daysPassed === 0) return 'Today'
+    if(daysPassed === 1) return 'yesterday'
+    if(daysPassed <= 7 ) return `${daysPassed} days ago`
+    else{
+      const day = `${date.getDay()}`.padStart(2 , 0)
+      const month = `${date.getMonth() + 1 }`.padStart(2 , 0)
+      const year = date.getFullYear()
+      return `${day}/${month}/${year}`
+    }
+}
 
+
+const startLogOutTimer = () => {
+  let time = 300
+  const tick = () => {
+    const min = String(Math.trunc(time / 60)).padStart(2, 0);
+    const sec = String(time % 60).padStart(2, 0);
+    labelTimer.textContent = `${min}:${sec}`
+
+    if(time === 0){
+      clearInterval(timer)
+      containerApp.style.opacity = 0;
+      labelWelcome.textContent = "Login to start"
+    }   
+    
+    time--
+  }
+     
+     tick()
+     timer = setInterval(tick, 1000)
+}
 
 
 const displayMovements = (account , sort = false) => {
@@ -101,20 +134,14 @@ const displayMovements = (account , sort = false) => {
   movs.forEach((movement, index) => {
     const type = movement > 0 ? 'deposit' : 'withdrawal'
 
-    //Implementing the current date
-    const now = new Date(account.movementsDates[index])
-    const day = `${now.getDay()}`.padStart(2 , 0)
-    const month = `${now.getMonth() + 1 }`.padStart(2 , 0)
-    const year = now.getFullYear()
-    const hour = now.getHours()
-    const minutes = now.getMinutes()
-    const displayDate = `${day}/${month}/${year}, ${hour}:${minutes}`
+    //Setting the current date
+    const date = new Date(account.movementsDates[index])
+    const displayDate = formatDisplayDates(date)
 
-   
     const html = `
     <div class="movements__row">
       <div class="movements__type movements__type--${type}">${index + 1} ${type}</div>
-      <div class="movements__date"></div>
+      <div class="movements__date">${displayDate}</div>
       <div class="movements__value">${movement.toFixed(2)}</div>
     </div>`
 
@@ -132,6 +159,7 @@ const calcUserBalance = (account) => {
  const balance =  account.movements.reduce((accumalator , currentMovement ) => {
     return accumalator + currentMovement
   }, 0)
+  account.balance = balance
   labelBalance.textContent = `${balance} EUR`
 }
 
@@ -168,14 +196,27 @@ const calcUserSummary = (acc) => {
    currentAccount = accounts.find(acc => acc.userName === inputLoginUsername.value)
 
   if(currentAccount?.pin === Number(inputLoginPin.value)){
-    labelWelcome.textContent = `Welcome back ${currentAccount.owner.split(' ')[0]}`
-    containerApp.style.opacity = 100;
-    inputLoginUsername.value = inputLoginPin.value = ''
-    inputLoginPin.blur() 
+       labelWelcome.textContent = `Welcome back ${currentAccount.owner.split(' ')[0]}`
+       containerApp.style.opacity = 100;
+       inputLoginUsername.value = inputLoginPin.value = ''
+       inputLoginPin.blur()   
+       
+      // mainatinaning the timer
+      if(timer) clearInterval(timer);      
+      timer = startLogOutTimer()
+      updateUI(currentAccount)
+    }
 
-     updateUI(currentAccount)
- }
+   //create the dates
+   const now = new Date()
+   const day = `${now.getDay()}`.padStart(2 , 0)
+   const month = `${now.getMonth() + 1 }`.padStart(2 , 0)
+   const year = now.getFullYear()
+   const hour = now.getHours()
+   const minutes = now.getMinutes()
+   labelDate.textContent = `${day}/${month}/${year}, ${hour}:${minutes}`
 });
+
 
 btnTransfer.addEventListener('click' , (e) => {
   e.preventDefault();
@@ -192,7 +233,13 @@ btnTransfer.addEventListener('click' , (e) => {
         recieverAccount.movements.push(amount)
      }
 
+     currentAccount.movementsDates.push(new Date().toISOString())
+     recieverAccount.movementsDates.push(new Date().toISOString())
+
      updateUI(currentAccount)
+
+    // clearInterval(timer)
+    // timer = startLogOutTimer()
 })
 
 btnLoan.addEventListener('click' , (e) => {
@@ -200,11 +247,18 @@ btnLoan.addEventListener('click' , (e) => {
   const amount = +(Math.floor(inputLoanAmount.value))  //The plus sign turn it to an integer
 
   if(amount > 0 && currentAccount.movements.some(move => move >= amount * 0.1 )){
-    currentAccount.movements.push(amount)
-    updateUI(currentAccount)
+    setTimeout(() => {
+      currentAccount.movements.push(amount)
+      currentAccount.movementsDates.push(new Date().toISOString())
+     
+       // reset timer
+   //   clearInterval(timer)
+   //   timer = startLogOutTimer() 
+
+      updateUI(currentAccount)
+    }, 3000)
   }
-   inputLoanAmount.value = ''
-    
+   inputLoanAmount.value = ''  
 })
 
 btnClose.addEventListener('click', (e) => {
@@ -228,18 +282,4 @@ btnSort.addEventListener( 'click' , (e) => {
   displayMovements(currentAccount, !sorted)
   sorted = !sorted
 })
-
-//ALWAYS LOGGED IN FEATURE BY account1
-currentAccount = account1
-updateUI(currentAccount)
-containerApp.style.opacity = 100
-
-
-const now = new Date()
-const day = `${now.getDay()}`.padStart(2 , 0)
-const month = `${now.getMonth() + 1 }`.padStart(2 , 0)
-const year = now.getFullYear()
-const hour = now.getHours()
-const minutes = now.getMinutes()
-labelDate.textContent = `${day}/${month}/${year}, ${hour}:${minutes}`
 
